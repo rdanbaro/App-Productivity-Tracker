@@ -4,18 +4,27 @@ import pandas as pd
 import streamlit as st
 
 def parse_duration(duration_str):
+    """
+    Convierte una duración en formato 'HH:MM' o 'HH:MM:SS' a horas decimales.
+    Es compatible con ambos formatos.
+    """
     if pd.isna(duration_str): return 0.0
     try:
         parts = str(duration_str).split(':')
         hours = int(parts[0])
         minutes = int(parts[1])
-        return hours + (minutes / 60.0)
-    except (ValueError, IndexError): return 0.0
+        # --- CAMBIO AQUÍ ---
+        # Si existe una tercera parte (segundos), la añadimos al cálculo.
+        seconds = int(parts[2]) if len(parts) > 2 else 0
+        
+        return hours + (minutes / 60.0) + (seconds / 3600.0)
+    except (ValueError, IndexError): 
+        return 0.0
 
 def process_uploaded_file(df):
     required_columns = ['Dia', 'Duracion', 'Tarea', 'Etiquetas']
     if not all(col in df.columns for col in required_columns):
-        st.error(f"El archivo CSV debe contener: {', '.join(required_columns)}")
+        st.error(f"El archivo CSV debe contener las columnas: {', '.join(required_columns)}")
         return None
     
     processed_df = df[required_columns].copy()
