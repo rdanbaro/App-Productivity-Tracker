@@ -7,12 +7,25 @@ import plotly.express as px
 from modulos.database import init_db, save_data_to_db, load_data_from_db, clear_database
 from modulos.processing import process_uploaded_file, get_new_entries
 
+# --- NUEVA FUNCIÓN DE AYUDA ---
+def format_hours_minutes(hours_decimal):
+    """Convierte un número decimal de horas a un formato de string 'Xh Ymin'."""
+    if pd.isna(hours_decimal):
+        return "0h 0min"
+    
+    # Separar la parte entera (horas)
+    hours = int(hours_decimal)
+    # Calcular los minutos a partir de la parte decimal y redondear
+    minutes = round((hours_decimal - hours) * 60)
+    
+    return f"{hours}h {minutes}min"
+
+# --- INICIALIZACIÓN DE LA APP ---
 init_db()
 st.set_page_config(layout="wide", page_title="Analizador de Productividad Avanzado")
 
 # --- BARRA LATERAL ---
 st.sidebar.title("Gestión de Datos")
-
 uploaded_file = st.sidebar.file_uploader("1. Sube tu archivo CSV", type="csv")
 
 if uploaded_file is not None:
@@ -78,12 +91,13 @@ else:
                 monthly_totals = df_comparison.groupby('Mes')['Horas'].sum()
                 cols = st.columns(len(monthly_totals))
                 for i, (month, total_hours) in enumerate(monthly_totals.items()):
-                    cols[i].metric(f"Total Horas en {month}", f"{total_hours:.2f} h")
+                    # --- CAMBIO AQUÍ ---
+                    formatted_time = format_hours_minutes(total_hours)
+                    cols[i].metric(f"Total Horas en {month}", formatted_time)
                 
-                # --- LÓGICA REINTRODUCIDA ---
                 with st.expander("Ver datos detallados para la selección mensual"):
                     st.dataframe(df_comparison)
-
+                
                 st.markdown("---")
                 monthly_summary = df_comparison.groupby(['Mes', 'Categoria'])['Horas'].sum().reset_index()
                 fig = px.bar(monthly_summary, x='Mes', y='Horas', color='Categoria', title='Horas por Categoría entre Meses', barmode='group')
@@ -101,9 +115,10 @@ else:
                 weekly_totals = df_comparison.groupby('Semana')['Horas'].sum()
                 cols = st.columns(len(weekly_totals))
                 for i, (week, total_hours) in enumerate(weekly_totals.items()):
-                    cols[i].metric(f"Total Horas en {week}", f"{total_hours:.2f} h")
-
-                # --- LÓGICA REINTRODUCIDA ---
+                    # --- CAMBIO AQUÍ ---
+                    formatted_time = format_hours_minutes(total_hours)
+                    cols[i].metric(f"Total Horas en {week}", formatted_time)
+                
                 with st.expander("Ver datos detallados para la selección semanal"):
                     st.dataframe(df_comparison)
 
@@ -117,7 +132,11 @@ else:
             selected_day = st.date_input("Elige un día", max_date)
             df_day = df_filtered[df_filtered['Dia'].dt.date == selected_day]
             if not df_day.empty:
-                st.metric("Total Horas en este día", f"{df_day['Horas'].sum():.2f} h")
+                # --- CAMBIO AQUÍ ---
+                total_hours_day = df_day['Horas'].sum()
+                formatted_time = format_hours_minutes(total_hours_day)
+                st.metric("Total Horas en este día", formatted_time)
+                
                 fig = px.pie(df_day, names='Tarea', values='Horas', title=f"Distribución de Tareas del {selected_day.strftime('%d/%m/%Y')}")
                 st.plotly_chart(fig, use_container_width=True)
             else:
